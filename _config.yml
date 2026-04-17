@@ -1,0 +1,9 @@
+theme: jekyll-theme-minima
+title: addadi
+description: Notes from the homelab
+url: "https://addadi.github.io"
+timezone: Asia/Jerusalem
+markdown: kramdown
+kramdown:
+  input: GFM
+permalink: /:year/:month/:day/:title/
