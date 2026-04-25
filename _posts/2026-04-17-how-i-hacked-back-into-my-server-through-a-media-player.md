@@ -5,7 +5,7 @@ date: 2026-04-17
 categories: homelab linux debugging
 ---
 
-*A headless Arch server, a kernel update that broke ZFS, no physical access, and the only way in was through a media player.*
+_A headless Arch server, a kernel update that broke ZFS, no physical access, and the only way in was through a media player._
 
 ---
 
@@ -21,9 +21,9 @@ I was abroad. Due to circumstances beyond my control, I couldn't get back home f
 
 Around mid-March, the server went dark. No SSH, no ping, nothing. Other devices on the LAN were reachable through my VPN, so the network was fine. The server had simply vanished.
 
-The culprit turned out to be the onboard Intel I217-LM - its transmit descriptor queue froze, a known bug with PCIe ASPM and the Intel ME arbiter. The PHY stayed up (link light on), so the kernel never triggered a reset. The NIC just sat there, link up, passing zero packets. I'd actually seen this happen once before, maybe a year ago - power-cycling the cable fixed it that time too, and I'd filed it away as a fluke.
+The culprit turned out to be the onboard Intel I217-LM - its transmit descriptor queue froze, a known bug with PCIe ASPM and the Intel ME arbiter. The PHY stayed up (link light on), so the kernel never triggered a reset. The NIC just sat there, link up, passing zero packets. This had happened once before, about a year earlier - same fix, unplug and replug the cable. I hadn't thought about it since.
 
-I called a friend and talked him through visiting my apartment. I unlocked the door remotely using a SwitchBot smart lock - one of those IoT gadgets that's more useful than you'd expect. He unplugged and replugged the Ethernet cable, and plugged in a USB WiFi dongle as a backup path. The NIC recovered. I was back in.
+I asked a friend to go to my apartment. I unlocked the door remotely using a SwitchBot smart lock - one of those IoT gadgets that's more useful than you'd expect. He unplugged and replugged the Ethernet cable, and plugged in a USB WiFi dongle as a backup path. The NIC recovered. I was back in.
 
 Over the next few days I hardened things remotely: a watchdog script that detects TX stalls and resets the interface, WiFi failover, and `pcie_aspm=off` in GRUB. The system was stable. I ran `pacman -Syu`, verified everything, and rebooted to apply the kernel update and boot parameters cleanly.
 
@@ -80,7 +80,7 @@ dkms status: zfs/2.3.3: added
 find /lib/modules -name 'zfs.ko*': (empty)
 ```
 
-My home directory didn't exist. Not corrupted, not permission-denied - *gone*.
+My home directory didn't exist. Not corrupted, not permission-denied - _gone_.
 
 The reason: ZFS's CDDL license is incompatible with the kernel's GPL, so it can never ship in mainline. On Arch, it's built out-of-tree via DKMS, which means every time the kernel updates, the ZFS module needs to be recompiled against the new kernel headers. I'd actually run into a ZFS mount issue once before after a kernel update - that time the module built fine but the mount service lost a race with the bind mounts. I'd fixed it with a systemd dependency and moved on.
 
