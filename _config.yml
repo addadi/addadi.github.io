@@ -6,16 +6,13 @@ markdown: kramdown
 kramdown:
   input: GFM
 permalink: /:year/:month/:day/:title/
-remote_theme: "mmistakes/minimal-mistakes@4.26.2"
+theme: jekyll-theme-hacker
 plugins:
-  - jekyll-include-cache
-minimal_mistakes_skin: "air"
+  - jekyll-feed
 defaults:
   - scope:
       path: ""
       type: posts
     values:
-      layout: single
+      layout: default
       author_profile: true
-      read_time: true
-      show_date: true
