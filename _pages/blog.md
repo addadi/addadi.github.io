@@ -4,4 +4,6 @@ title: blog
 permalink: /blog/
 nav: true
 nav_order: 2
+pagination:
+  enabled: true
 ---

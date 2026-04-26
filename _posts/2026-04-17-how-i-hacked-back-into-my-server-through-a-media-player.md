@@ -27,8 +27,6 @@ I asked a friend to go to my apartment. I unlocked the door remotely using a Swi
 
 Over the next few days I hardened things remotely: a watchdog script that detects TX stalls and resets the interface, WiFi failover, and `pcie_aspm=off` in GRUB. The system was stable. I ran `pacman -Syu`, verified everything, and rebooted to apply the kernel update and boot parameters cleanly.
 
-Then I rebooted.
-
 ---
 
 ## Act II: Locked Out
