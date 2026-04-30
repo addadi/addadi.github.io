@@ -156,7 +156,8 @@ imagemagick:
 
 lazy_loading_images: true
 
-enable_google_analytics: false
+enable_google_analytics: true
+google_analytics: G-QTE50ZKTN8
 enable_cronitor_analytics: false
 enable_pirsch_analytics: false
 enable_openpanel_analytics: false
