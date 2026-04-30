@@ -32,7 +32,7 @@ serve_schema_org: false
 
 blog_name: addadi
 blog_description: adventures in overengineering
-permalink: /blog/:year/:title/
+permalink: /:year/:month/:day/:title/
 lsi: false
 
 pagination:
