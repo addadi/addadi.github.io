@@ -59,9 +59,9 @@ I decided to write a Jellyfin plugin that runs shell commands and reports back t
 
 I don't know C#. With an LLM doing the heavy lifting, I wrote a minimal Jellyfin plugin - an `IHostedService` that runs shell commands on startup and writes the output to Jellyfin's log directory, where I could read it through the API.
 
-Getting the plugin onto the server was a mess. I couldn't build .NET locally, so I used GitHub Actions. Each iteration - push code, wait for the build, create a release, update the plugin manifest, install via the API, restart Jellyfin, read the output - took 5 to 8 minutes when everything went right. When something went wrong, add another 10.
+Getting the plugin onto the server was a mess. Each iteration - push code, wait for GitHub Actions to build, create a release, update the plugin manifest, install via the API, restart Jellyfin, read the output - took 5 to 8 minutes when everything went right. When something went wrong, add another 10.
 
-But when the output finally came back, the problem was obvious:
+It was like the stories you hear from computing veterans about punch cards: submit a job, wait your turn, get output, study it, punch new cards, get back in line. To get the plugin into Jellyfin, I had to publish it to a repository that Jellyfin could pull from. That meant using GitHub Actions to build and release each version. Many builds and Jellyfin restarts later, it finally loaded. Then it loaded but didn't run. Then it ran but produced no output. Then it produced output, but nothing useful - I had to stare at it and figure out what I was actually looking for, then write another version that checked the right things. Each cycle cost 8 to 20 minutes. It took several rounds before I got meaningful diagnostics back. But once I did, the problem was obvious:
 
 ```
 ls: cannot access '/home/myuser/.ssh/': No such file or directory
@@ -78,7 +78,7 @@ find /lib/modules -name 'zfs.ko*': (empty)
 
 My home directory didn't exist. Not corrupted, not permission-denied - _gone_.
 
-The reason: ZFS's CDDL license is incompatible with the kernel's GPL, so it can never ship in mainline. On Arch, it's built out-of-tree via DKMS, which means every time the kernel updates, the ZFS module needs to be recompiled against the new kernel headers. I'd actually run into a ZFS mount issue once before after a kernel update - that time the module built fine but the mount service lost a race with the bind mounts. I'd fixed it with a systemd dependency and moved on.
+My `/home` lived on ZFS. Unlike ext4 or btrfs, which are built into the Linux kernel, ZFS has a CDDL license that's incompatible with the kernel's GPL. It can never ship in mainline. On Arch, it's built out-of-tree via DKMS - every time the kernel updates, the ZFS module needs to be recompiled against the new kernel headers. If that recompilation fails, the module doesn't load, and your ZFS pools stay offline. I'd actually run into a ZFS mount issue once before after a kernel update - that time the module built fine but the mount service lost a race with the bind mounts. I'd fixed it with a systemd dependency and moved on.
 
 This time was worse. The LTS kernel had jumped from 6.15 to 6.18, and ZFS 2.3.3 simply didn't support 6.18. DKMS tried to compile the module, failed, and told nobody. No alert, no failed boot warning, no email. The system booted cleanly into a state where a critical storage layer silently didn't exist.
 
@@ -125,8 +125,6 @@ I was in. From this point on, the rest was standard Linux troubleshooting.
 
 ## The Fix
 
-With proper SSH access, everything became routine sysadmin work.
-
 The third-party `archzfs` repo was months behind upstream, but the AUR had an OpenZFS package built for my exact kernel. After some dependency wrangling, I built and installed it.
 
 ```bash
@@ -157,3 +155,5 @@ In. ZFS mounted. Home directory intact. Everything back.
 ## What I Learned
 
 **Always have a second way in.** I need a PiKVM, or an IPMI card, or a serial console - out-of-band access that doesn't depend on the OS being healthy. Everything else - the silent DKMS failure, the ZFS license situation, the storage-dependent SSH keys - is a minor inconvenience if you can get to a console. Without one, I was stuck building C# plugins for a media server at 2am with an AI assistant, piping shell commands over curl through a movie streaming API.
+
+**ZFS on Arch is a commitment.** It works great until it doesn't, and when it breaks after a kernel update, it breaks silently. The Arch Wiki suggests pinning your kernel version to avoid this. I didn't. I also should have had the ZFS hook in mkinitcpio and a systemd unit that fails loudly if the pool can't import.
