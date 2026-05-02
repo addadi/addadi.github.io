@@ -94,7 +94,7 @@ The first thing I checked was who the Jellyfin process was running as:
 uid=973(jellyfin) gid=973(jellyfin) groups=973(jellyfin),91(video),1000(myuser)
 ```
 
-The Jellyfin user was in my user's group - a workaround I'd set up ages ago so Jellyfin could access some family videos stored under my home directory. But I needed root to fix the storage layer. The interactive endpoint supported piping stdin, which meant I could feed a password to `su`. A few curl commands later, I had root access tunneled through the plugin's endpoint over my VPN. 23 build iterations from blank repo to root shell.
+The Jellyfin user was in my user's group - a workaround I'd set up ages ago so Jellyfin could access some family videos stored under my home directory. But I needed root to fix the storage layer. The interactive endpoint supported piping stdin, which meant I could feed a password to `su`. A few curl commands later, I had root access tunneled through the plugin's endpoint over my VPN. 23 plugin builds from blank repo to root shell.
 
 ### Getting SSH back
 
