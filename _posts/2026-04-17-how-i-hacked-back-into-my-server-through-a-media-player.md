@@ -19,9 +19,9 @@ I was stuck abroad for weeks, possibly longer. No one who understands Linux coul
 
 ## The NIC Dies
 
-Around mid-March, the server went dark. No SSH, no ping, nothing. Other devices on the LAN were reachable through my VPN, so the network was fine. The server had simply vanished.
+Around mid-March, the server went dark. No SSH, no ping, nothing. Other devices on the LAN were reachable through my VPN, so the network was fine. The server had vanished.
 
-It was the onboard Intel I217-LM - its transmit descriptor queue froze, a known bug with PCIe ASPM and the Intel ME arbiter. The PHY stayed up (link light on), so the kernel never triggered a reset. The NIC just sat there, link up, passing zero packets. This had happened once before, about a year earlier - same fix, unplug and replug the cable. I hadn't thought about it since.
+It was the onboard Intel I217-LM - its transmit descriptor queue froze, a known bug. The PHY stayed up (link light on), so the kernel never triggered a reset. The NIC just sat there, link up, passing zero packets. This had happened once before, about a year earlier - same fix, unplug and replug the cable. I hadn't thought about it since.
 
 I asked a friend to go to my apartment. I unlocked the door remotely using a SwitchBot smart lock - one of those IoT gadgets that's more useful than you'd expect. He unplugged and replugged the Ethernet cable, and plugged in a USB WiFi dongle as a backup path. The NIC recovered. I was back in.
 
@@ -35,11 +35,11 @@ The server came back. It responded to pings. But SSH rejected every key I threw 
 
 I spent some time trying everything from the client side. Different keys, different algorithms, forcing specific signature types. I generated fresh keys and tried those. I tried from my laptop, from the OpenWrt router on the same LAN. I watched the verbose SSH output cycle through every key in my agent - seven of them - each one offered and rejected, until the server disconnected me with `Too many authentication failures`. I stripped it down to a single key. Still rejected. I forced algorithm negotiation. Still rejected.
 
-I didn't know what was wrong. The SSH config could have changed during the update, though there was no obvious reason it would - I hadn't touched it, and `pacman` doesn't overwrite modified config files. Permissions on my `.ssh` directory could have shifted. The new OpenSSH version might have dropped support for my key type. I was debugging blind, with no way to see the server side of the conversation.
+I didn't know what was wrong. The SSH config could have changed during the update, though there was no obvious reason it would - I hadn't touched it, and `pacman` doesn't overwrite modified config files. Permissions on my `.ssh` directory could have shifted. The new OpenSSH version might have dropped support for my key type. I was debugging blind.
 
 The only clue was that `sshd` was clearly running and accepting connections - it just wouldn't let me in.
 
-I was weeks away from getting home, at minimum. I had personal documents on that server I needed, ongoing side projects, and a Home Assistant VM that controlled parts of my home - covers, windows, power, climate and more - which I relied on managing remotely. I had to get back in.
+I was weeks away from getting home, at minimum. I had personal documents on that server I needed, ongoing side projects, and a Home Assistant VM that controlled parts of my home - covers, windows, power, climate. I had to get back in.
 
 I have friends nearby, but walking someone through headless SSH debugging over the phone is a nightmare for everyone involved.
 
@@ -49,7 +49,7 @@ I have friends nearby, but walking someone through headless SSH debugging over t
 
 I started checking what else was reachable on the server. Port by port, service by service. Most things were down - my containers hadn't survived the reboot, Samba was broken, Home Assistant was gone.
 
-But one service was up: Jellyfin, my media server, listening on port 8096. I could reach the web UI through my VPN and log in. Jellyfin wasn't exposed to the internet - it was only reachable through my VPN.
+But one service was up: Jellyfin, my media server, listening on port 8096. I could reach the web UI through my VPN and log in. Jellyfin wasn't exposed to the internet.
 
 A few weeks earlier, I'd been tinkering with Jellyfin's plugin system and its REST API for an unrelated project. I'd generated an API key, played with the endpoints, and gotten a sense of how plugins are loaded - .NET assemblies that Jellyfin discovers and runs inside its own process with the service user's permissions.
 
@@ -59,9 +59,9 @@ I decided to write a Jellyfin plugin that runs shell commands and reports back t
 
 I don't know C#. With an LLM doing the heavy lifting, I wrote a minimal Jellyfin plugin - an `IHostedService` that runs shell commands on startup and writes the output to Jellyfin's log directory, where I could read it through the API.
 
-Getting the plugin onto the server was a mess. Each iteration - push code, wait for GitHub Actions to build, create a release, update the plugin manifest, install via the API, restart Jellyfin, read the output - took 5 to 8 minutes when everything went right. When something went wrong, add another 10.
+The only way to install a custom plugin on Jellyfin is to add a plugin repository URL that points to a manifest JSON. So I created a GitHub repo, set up GitHub Actions to build the .NET DLL on push, and added the repo's manifest URL to my Jellyfin instance via the API. Each iteration - push code, wait for Actions to build, update the manifest, restart Jellyfin, read the output - took 5 to 8 minutes when everything went right. When something went wrong, add another 10.
 
-It was like the stories you hear from computing veterans about punch cards: submit a job, wait your turn, get output, study it, punch new cards, get back in line. To get the plugin into Jellyfin, I had to publish it to a repository that Jellyfin could pull from. That meant using GitHub Actions to build and release each version. Many builds and Jellyfin restarts later, it finally loaded. Then it loaded but didn't run. Then it ran but produced no output. Then it produced output, but nothing useful - I had to stare at it and figure out what I was actually looking for, then write another version that checked the right things. Each cycle cost 8 to 20 minutes. It took several rounds before I got meaningful diagnostics back. But once I did, the problem was obvious:
+It was like the stories you hear from computing veterans about punch cards: submit a job, wait your turn, get output, study it, punch new cards, get back in line. The first versions didn't even pick up the plugin. Then it loaded but didn't run. Then it ran but produced no output. Then it produced output, but nothing useful - I had to stare at it and figure out what I was actually looking for, then write another version that checked the right things. Each cycle cost 8 to 20 minutes. But eventually the diagnostics came back and the problem was obvious:
 
 ```
 ls: cannot access '/home/myuser/.ssh/': No such file or directory
@@ -86,7 +86,7 @@ No ZFS module meant no pool import. No pool meant no `/home`. No `/home` meant n
 
 ### From diagnostics to a shell
 
-Waiting 8 minutes to see each diagnostic output was slow going. So the next iteration replaced the diagnostic dump with an interactive HTTP endpoint - a controller that accepts a command via POST and returns stdout, stderr, and exit code. Once the plugin finally deployed: instant command execution. I could now run any command on the server by sending a curl request to the plugin endpoint and reading the response.
+Reading diagnostics one dump at a time was too slow. So I rewrote the plugin with an interactive HTTP endpoint - a controller that accepts a command via POST and returns stdout, stderr, and exit code. More build cycles, more deploys. Once it finally worked, I had instant command execution - any command on the server, via curl through the plugin endpoint.
 
 The first thing I checked was who the Jellyfin process was running as:
 
@@ -94,7 +94,7 @@ The first thing I checked was who the Jellyfin process was running as:
 uid=973(jellyfin) gid=973(jellyfin) groups=973(jellyfin),91(video),1000(myuser)
 ```
 
-The Jellyfin user was in my user's group - a workaround I'd set up ages ago so Jellyfin could access some family videos stored under my home directory. But I needed root to fix the storage layer. The interactive endpoint supported piping stdin, which meant I could feed a password to `su`. A few curl commands later, I had root access tunneled through the plugin's endpoint over my VPN.
+The Jellyfin user was in my user's group - a workaround I'd set up ages ago so Jellyfin could access some family videos stored under my home directory. But I needed root to fix the storage layer. The interactive endpoint supported piping stdin, which meant I could feed a password to `su`. A few curl commands later, I had root access tunneled through the plugin's endpoint over my VPN. 23 build iterations from blank repo to root shell.
 
 ### Getting SSH back
 
