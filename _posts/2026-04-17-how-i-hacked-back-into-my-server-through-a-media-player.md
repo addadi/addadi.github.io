@@ -80,7 +80,7 @@ My home directory didn't exist. Not corrupted, not permission-denied - _gone_.
 
 My `/home` lived on ZFS. Unlike ext4 or btrfs, which are built into the Linux kernel, ZFS has a CDDL license that's incompatible with the kernel's GPL. It can never ship in mainline. On Arch, it's built out-of-tree via DKMS - every time the kernel updates, the ZFS module needs to be recompiled against the new kernel headers. If that recompilation fails, the module doesn't load, and your ZFS pools stay offline. I'd actually run into a ZFS mount issue once before after a kernel update - that time the module built fine but the mount service lost a race with the bind mounts. I'd fixed it with a systemd dependency and moved on.
 
-This time was worse. The LTS kernel had jumped from 6.15 to 6.18, and ZFS 2.3.3 simply didn't support 6.18. DKMS tried to compile the module, failed, and told nobody. No alert, no failed boot warning, no email. The system booted cleanly into a state where a critical storage layer silently didn't exist.
+This time was worse. The LTS kernel had jumped from 6.15 to 6.18, and ZFS 2.3.3 simply didn't support 6.18. DKMS tried to compile the module, failed, and told nobody. No alert, no failed boot warning. The system booted cleanly into a state where a critical storage layer silently didn't exist.
 
 No ZFS module meant no pool import. No pool meant no `/home`. No `/home` meant no `authorized_keys`. SSH kept looking for keys in a file that wasn't there.
 
