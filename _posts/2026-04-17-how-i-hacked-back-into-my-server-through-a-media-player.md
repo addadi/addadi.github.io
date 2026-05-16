@@ -156,4 +156,10 @@ In. ZFS mounted. Home directory intact. Everything back.
 
 **Always have a second way in.** I need a PiKVM, or an IPMI card, or a serial console - out-of-band access that doesn't depend on the OS being healthy. Everything else - the DKMS failure I didn't catch, the ZFS license situation, the storage-dependent SSH keys - is a minor inconvenience if you can get to a console. Without one, I was stuck building C# plugins for a media server at 2am with an AI assistant, piping shell commands over curl through a movie streaming API.
 
-**ZFS on Arch is a commitment.** It works great until it doesn't, and when it breaks after a kernel update, it doesn't announce itself. The Arch Wiki suggests pinning your kernel version to avoid this. I didn't. I also should have had the ZFS hook in mkinitcpio and a systemd unit that fails loudly if the pool can't import.
+**Use archzfs kernel-specific packages, not DKMS.** The Arch community pointed this out: packages like `zfs-linux-lts` from the archzfs repo depend on the kernel package directly. If ZFS can't build for the new kernel, pacman refuses the upgrade. That's the safety net I didn't have with DKMS.
+
+**Add the `zfs` hook to mkinitcpio.** This loads the module early in boot, before mount services need it. The wiki notes that without it, `zfs-mount.service` loads the module too late.
+
+**Use `zfs-mount-generator` instead of `zfs-mount.service`.** It creates proper systemd mount units at boot, which is more reliable.
+
+**Pin your kernel in `pacman.conf`.** `IgnorePkg = linux-lts linux-lts-headers` as an extra layer to prevent accidental upgrades until you've verified ZFS compatibility. The wiki explicitly recommends this.
